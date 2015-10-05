@@ -19,7 +19,17 @@ module Norikra
       
       begin
         target_info = JSON.parse(Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port]))
+        res = Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port])
+        if res == ""
+          puts "No such target"
+          exit 1
+        end
+        target_info = JSON.parse(res)
         puts target_info.to_s
+        if target_info['fields'].size == 0
+          puts "No fields registered"
+          exit 1
+        end
         query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})
         query_name = "select_all_#{target_info['name']}"
         client(parent_options).register(query_name,nil,query)

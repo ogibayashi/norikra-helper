@@ -33,7 +33,6 @@ module Norikra
         end
         query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})
         query_name = "select_all_#{target_info['name']}"
-        client(parent_options).register(query_name,nil,query)
         client(parent_options).register(query_name,@query_group, query)
         while true 
           client(parent_options).event(query_name).each do |time,event|

@@ -20,7 +20,6 @@ module Norikra
       time_formatter = lambda{|t| Time.at(t).strftime(options[:time_format])}
       
       begin
-        target_info = JSON.parse(Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port]))
         res = Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port])
         if res == ""
           puts "No such target"

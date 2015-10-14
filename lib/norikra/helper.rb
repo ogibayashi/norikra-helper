@@ -22,13 +22,13 @@ module Norikra
       begin
         res = Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port])
         if res == ""
-          puts "No such target"
+          STDERR.puts "No such target"
           exit 1
         end
         target_info = JSON.parse(res)
-        puts target_info.to_s
+        STDERR.puts target_info.to_s
         if target_info['fields'].size == 0
-          puts "No fields registered"
+          STDERR.puts "No fields registered"
           exit 1
         end
         query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})

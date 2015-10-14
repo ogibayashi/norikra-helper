@@ -89,6 +89,30 @@ module Norikra
       end
     end
   end
+
+  class Event < Thor
+    include Norikra::Client::CLIUtil
+
+    desc "replay TARGET FILE", "Send saved events in FILE to TARGET"
+    option :batch_size, :type => :numeric, :default => 10000, :desc => "records sent in once transferring (default: 10000)"
+    def replay(target, file)
+      client = client(parent_options)
+      parser = parser("json")
+      buffer = []
+      File.open(file).each_line do |line|
+        buffer.push(parser.parse(line))
+        if buffer.size >= options[:batch_size]
+          client.send(target, buffer)
+          buffer = []
+        end
+      end
+
+      wrap do
+        client.send(target, buffer) if buffer.size > 0
+      end
+
+    end
+  end
   
   class HelperCLI < Thor
     include Norikra::Client::CLIUtil
@@ -101,5 +125,7 @@ module Norikra
     subcommand "target", Target
     desc "query CMD ...ARGS", "use query"
     subcommand "query", Query
+    desc "event CMD ...ARGS", "send events"
+    subcommand "event", Event
   end
 end

@@ -4,6 +4,7 @@ require "norikra/client"
 require "norikra/client/cli"
 require "net/http"
 require "json"
+require "timeout"
 
 module Norikra
 
@@ -13,6 +14,7 @@ module Norikra
     option :format, :type => :string, :default => 'json', :desc => "format of output data per line of stdout [json(default), ltsv]"
     option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
     option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
+    option :timeout, :type => :numeric, :default => nil, :desc => "Timeout in specified seconds (default: nil = no timeout)", :aliases => :t
     @query_group = "norikra-helper"
     
     def see(target)
@@ -34,13 +36,17 @@ module Norikra
         query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})
         query_name = "select_all_#{target_info['name']}"
         client(parent_options).register(query_name,@query_group, query)
-        while true 
-          client(parent_options).event(query_name).each do |time,event|
-            event = {options[:time_key] => Time.at(time).strftime(options[:time_format])}.merge(event)
-            puts formatter.format(event)
+        
+        timeout(options[:timeout]) do 
+          while true 
+            client(parent_options).event(query_name).each do |time,event|
+              event = {options[:time_key] => Time.at(time).strftime(options[:time_format])}.merge(event)
+              puts formatter.format(event)
+            end
+            sleep 1
           end
-          sleep 1
         end
+      rescue Timeout::Error, Interrupt # Normal end
       ensure
         client(parent_options).deregister(query_name)
       end

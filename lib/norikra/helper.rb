@@ -7,6 +7,8 @@ require "json"
 require "timeout"
 
 module Norikra
+  QUERY_NAME_PREFIX = "norikra-tmp-"
+  QUERY_GROUP = "norikra-helper"
 
   class Target < Thor
     include Norikra::Client::CLIUtil
@@ -15,7 +17,7 @@ module Norikra
     option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
     option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
     option :timeout, :type => :numeric, :default => nil, :desc => "Timeout in specified seconds (default: nil = no timeout)", :aliases => :t
-    @query_group = "norikra-helper"
+    QUERY_GROUP = "norikra-helper"
     
     def see(target)
       formatter = formatter(options[:format])
@@ -35,7 +37,7 @@ module Norikra
         end
         query = %(SELECT #{target_info['fields'].map{  |i| "nullable(`#{i['name']}`)" }.join(',')} FROM #{target_info['name']})
         query_name = "select_all_#{target_info['name']}"
-        client(parent_options).register(query_name,@query_group, query)
+        client(parent_options).register(query_name,QUERY_GROUP, query)
         
         timeout(options[:timeout]) do 
           while true 
@@ -55,15 +57,15 @@ module Norikra
 
   class Query < Thor
     include Norikra::Client::CLIUtil
+    QUERY_NAME_PREFIX = "norikra-tmp-"
+    QUERY_GROUP = "norikra-helper"
+
     desc "test QUERY", "test QUERY. Register temporary query"
     option :format, :type => :string, :default => 'json', :desc => "format of output data per line of stdout [json(default), ltsv]"
     option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
     option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
     option :query_file, :type => :string, :default => nil, :desc => "read query from file", :aliases => :f
-    
     def test(query=nil)
-      @query_name_prefix = "norikra-tmp-"
-      @query_group = "norikra-helper"
 
       if query && options[:query_file]
         puts "Both query string and --query_file were specified"
@@ -79,8 +81,8 @@ module Norikra
       formatter = formatter(options[:format])
       time_formatter = lambda{|t| Time.at(t).strftime(options[:time_format])}
 
-      query_name = @query_name_prefix + "#{$$}_#{Time.now.to_i}"
-      client(parent_options).register(query_name, @query_group, query)
+      query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
+      client(parent_options).register(query_name, QUERY_GROUP, query)
       puts "Registered query: #{query_name}"
       begin
         while true
@@ -93,6 +95,45 @@ module Norikra
       ensure
         client(parent_options).deregister(query_name)
       end
+    end
+
+    desc "replace QUERY", "replace NAME QUERY. Replace the expression of query NAME to new one"
+    option :query_file, :type => :string, :default => nil, :desc => "read query from file", :aliases => :f
+    def replace(name, query=nil)
+
+      if query && options[:query_file]
+        STDERR.puts "Both query string and --query_file were specified"
+        exit 1
+      elsif not (query || options[:query_file])
+        STDERR.puts "Please specify query string or file."
+        exit 1
+      elsif options[:query_file]
+        query = File.open(options[:query_file]).read
+      end
+
+      current_query = client(parent_options).queries.select{  |q| q['name'] == name}.first
+      unless current_query
+        STDERR.puts "Query with name: #{name} does not exist"
+        exit 1
+      end
+
+      # try registering new query for syntax check
+      begin
+        tmp_query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
+        client(parent_options).register(tmp_query_name, QUERY_GROUP, query)
+      rescue => e
+        STDERR.puts "Error in registering query. #{$!}"
+        exit 1
+      ensure
+        if client(parent_options).queries.select{  |q| q['name'] == tmp_query_name}.first
+          client(parent_options).deregister(tmp_query_name)
+        end
+      end
+
+      # Actually de-regsister and register new query
+      STDERR.puts "Replacing query <#{name}>, old_expression: #{current_query['expression']}, new_expression: #{query}"
+      client(parent_options).deregister(name)
+      client(parent_options).register(name, current_query['group'], query)
     end
   end
 

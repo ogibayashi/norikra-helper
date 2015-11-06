@@ -101,16 +101,24 @@ module Norikra
 
     desc "replay TARGET FILE", "Send saved events in FILE to TARGET"
     option :batch_size, :type => :numeric, :default => 10000, :desc => "records sent in once transferring (default: 10000)"
+    option :batch_interval, :type => :numeric, :default => 0, :desc => "Wait time in seconds between each transferring (default: 0)", :aliases => :i
     def replay(target, file)
       client = client(parent_options)
       parser = parser("json")
       buffer = []
       File.open(file).each_line do |line|
-        buffer.push(parser.parse(line))
-        if buffer.size >= options[:batch_size]
+        ## if line is '# <number>' format, wait <number> seconds.
+        if /^#\s+(\d+)$/ =~ line
+          do_sleep = sleep $1.to_f
+        else
+          buffer.push(parser.parse(line))
+        end
+        if buffer.size >= options[:batch_size] || do_sleep
           client.send(target, buffer)
           buffer = []
+          sleep options[:batch_interval]
         end
+        sleep do_sleep if do_sleep
       end
 
       wrap do

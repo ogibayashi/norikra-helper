@@ -12,7 +12,8 @@ module Norikra::Helper
 
   class Target < Norikra::Client::Target
 
-    desc "see TARGET", "see event stream of TARGET"
+    # This command try to see all fields. But can not do well with container fields .
+    desc "see TARGET", "see event stream of TARGET."
     option :format, :type => :string, :default => 'json', :desc => "format of output data per line of stdout [json(default), ltsv]"
     option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
     option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
@@ -22,35 +23,43 @@ module Norikra::Helper
       time_formatter = lambda{|t| Time.at(t).strftime(options[:time_format])}
       
       begin
-        res = Net::HTTP.get(options[:host],"/json/target/#{target}",options[:http_port])
-        if res == ""
+        res = Net::HTTP.get(options[:host],"/stat/dump",options[:http_port])
+        stats = JSON.parse(res)
+        if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
           STDERR.puts "No such target"
           exit 1
         end
 
-        target_info = JSON.parse(res)
         STDERR.puts target_info.to_s
         if target_info['fields'].size == 0
           STDERR.puts "No fields registered"
           exit 1
         end
-        query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})
-        puts query
-        query_name = "select_all_#{target_info['name']}"
-        client(parent_options).register(query_name,QUERY_GROUP, query)
         
+        query = %(SELECT #{target_info['fields'].map{  |k,v| "nullable(#{k})" }.join(',')} FROM #{target_info['name']})
+        STDERR.puts query
+        query_name = QUERY_NAME_PREFIX + "_select_all_#{target_info['name']}"
+
+        wrap do 
+          client(parent_options).register(query_name,QUERY_GROUP, query)
+        end
+
         timeout(options[:timeout]) do 
           while true 
-            client(parent_options).event(query_name).each do |time,event|
-              event = {options[:time_key] => Time.at(time).strftime(options[:time_format])}.merge(event)
-              puts formatter.format(event)
+            wrap do 
+              client(parent_options).event(query_name).each do |time,event|
+                event = {options[:time_key] => Time.at(time).strftime(options[:time_format])}.merge(event)
+                puts formatter.format(event)
+              end
             end
             sleep 1
           end
         end
       rescue Timeout::Error, Interrupt # Normal end
       ensure
-        client(parent_options).deregister(query_name)
+        wrap do 
+          client(parent_options).deregister(query_name)
+        end
       end
     end
   end

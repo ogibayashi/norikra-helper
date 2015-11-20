@@ -5,4 +5,4 @@ lib = Pathname.new(__FILE__).dirname.join('..', 'lib').expand_path
 $LOAD_PATH.unshift lib.to_s
 
 require 'norikra/helper'
-Norikra::HelperCLI.start
+Norikra::Helper::HelperCLI.start

@@ -6,19 +6,17 @@ require "net/http"
 require "json"
 require "timeout"
 
-module Norikra
+module Norikra::Helper
   QUERY_NAME_PREFIX = "norikra-tmp-"
   QUERY_GROUP = "norikra-helper"
 
-  class Target < Thor
-    include Norikra::Client::CLIUtil
+  class Target < Norikra::Client::Target
+
     desc "see TARGET", "see event stream of TARGET"
     option :format, :type => :string, :default => 'json', :desc => "format of output data per line of stdout [json(default), ltsv]"
     option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
     option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
     option :timeout, :type => :numeric, :default => nil, :desc => "Timeout in specified seconds (default: nil = no timeout)", :aliases => :t
-    QUERY_GROUP = "norikra-helper"
-    
     def see(target)
       formatter = formatter(options[:format])
       time_formatter = lambda{|t| Time.at(t).strftime(options[:time_format])}
@@ -29,13 +27,15 @@ module Norikra
           STDERR.puts "No such target"
           exit 1
         end
+
         target_info = JSON.parse(res)
         STDERR.puts target_info.to_s
         if target_info['fields'].size == 0
           STDERR.puts "No fields registered"
           exit 1
         end
-        query = %(SELECT #{target_info['fields'].map{  |i| "nullable(`#{i['name']}`)" }.join(',')} FROM #{target_info['name']})
+        query = %(SELECT #{target_info['fields'].map{  |i| "nullable(#{i['name']})" }.join(',')} FROM #{target_info['name']})
+        puts query
         query_name = "select_all_#{target_info['name']}"
         client(parent_options).register(query_name,QUERY_GROUP, query)
         
@@ -169,15 +169,11 @@ module Norikra
     end
   end
   
-  class HelperCLI < Thor
-    include Norikra::Client::CLIUtil
-
-    class_option :host, :type => :string, :default => 'localhost'
-    class_option :port, :type => :numeric, :default => 26571
+  class HelperCLI < Norikra::Client::CLI
     class_option :http_port, :type => :numeric, :default => 26578
     
     desc "target CMD ...ARGS", "use targets"
-    subcommand "target", Target
+    subcommand "target", Norikra::Helper::Target
     desc "query CMD ...ARGS", "use query"
     subcommand "query", Query
     desc "event CMD ...ARGS", "send events"

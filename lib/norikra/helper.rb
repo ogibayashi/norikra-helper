@@ -1,6 +1,7 @@
 require "thor"
 require "norikra/client/cli"
 require "norikra/client"
+require "norikra/log_reader"
 
 module Norikra::Helper
   QUERY_NAME_PREFIX = "norikra-tmp-"
@@ -118,6 +119,31 @@ module Norikra::Helper
 
     end
 
+    desc "replay_with_time TARGET FILE", "Send saved events in FILE to TARGET"
+    option :time_key, :type => :string, :default => nil, :desc => "output key name for event time (default: nil. [time]\t[log] format is assumed)"
+    option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
+    def replay_with_time(target, file)
+      client = client(parent_options)
+
+      processed_file = file + "_processed"
+      parser = parser("json")
+      Norikra::Helper::LogReader.process(file, processed_file, options)
+      start_time = Time.now
+      buffer = []
+      File.open(processed_file).each_line do |line|
+        log = parser.parse(line)
+        buffer.push(log)
+        puts log
+        if log['flush']
+          client.send(target, buffer) if buffer.size > 0
+          buffer = []
+          if log['wait_till']
+            puts "sleeping #{[log['wait_till'] - (Time.now - start_time),0].max} seconds"
+            sleep [log['wait_till'] - (Time.now - start_time),0].max
+          end
+        end
+      end
+    end
   end
   
   class HelperCLI < Norikra::Client::CLI

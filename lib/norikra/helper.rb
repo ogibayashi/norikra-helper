@@ -1,4 +1,6 @@
 require "thor"
+require "net/http"
+require "json"
 require "norikra/client/cli"
 require "norikra/client"
 require "norikra/log_reader"
@@ -28,7 +30,7 @@ module Norikra::Helper
 
       query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
       client(parent_options).register(query_name, QUERY_GROUP, query)
-      puts "Registered query: #{query_name}"
+      STDERR.puts "Registered query: #{query_name}"
       begin
         while true
           x = Norikra::Client::Event.new([],options)
@@ -144,8 +146,37 @@ module Norikra::Helper
         end
       end
     end
+
   end
   
+  class Target < Norikra::Client::Target
+
+    desc "see TARGET", "See incoming events for the TARGET"
+    option :format, :type => :string, :default => 'json', :desc => "format of output data per line of stdout [json(default), ltsv]"
+    option :time_key, :type => :string, :default => 'time', :desc => "output key name for event time (default: time)"
+    option :time_format, :type => :string, :default => '%Y/%m/%d %H:%M:%S', :desc => "output time format (default: '2013/05/14 17:57:59')"
+    def see(target)
+
+      res = Net::HTTP.get(options[:host],"/stat/dump",options[:http_port])
+      stats = JSON.parse(res)
+      if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
+        STDERR.puts "No such target"
+        exit 1
+      end
+
+      if target_info['fields'].size == 0
+        STDERR.puts "No fields registered"
+        exit 1
+      end
+
+      query = %(SELECT #{target_info['fields'].map{  |k,v| "nullable(#{k})" }.join(',')} FROM #{target_info['name']})
+      STDERR.puts "Registering query:" + query
+
+      invoke Query, ["test", query], parent_options
+      
+    end
+  end
+
   class HelperCLI < Norikra::Client::CLI
     class_option :http_port, :type => :numeric, :default => 26578
     
@@ -154,6 +185,10 @@ module Norikra::Helper
 
     desc "event CMD ...ARGS", "send/fetch events"
     subcommand "event", Event
+
+    desc "target CMD ...ARGS", "manage targets"
+    subcommand "target", Target
+
   end
   
 end

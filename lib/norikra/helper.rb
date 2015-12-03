@@ -89,7 +89,7 @@ module Norikra::Helper
 
   end
 
-  class Event < Norikra::Client::CLI
+  class Event < Norikra::Client::Event
 
     desc "replay TARGET FILE", "Send saved events in FILE to TARGET"
     option :batch_size, :type => :numeric, :default => 10000, :desc => "records sent in once transferring (default: 10000)"

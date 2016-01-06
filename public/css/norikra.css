@@ -1,0 +1,45 @@
+body {
+  padding-top: 70px;
+  padding-bottom: 30px;
+}
+
+#navbar-norikra {
+  background-image: url(../img/banner.png);
+  background-size: auto 120px;
+  background-position: right bottom;
+  background-repeat: no-repeat;
+}
+
+.theme-dropdown .dropdown-menu {
+  display: block;
+  position: static;
+  margin-bottom: 20px;
+}
+
+.theme-showcase > p > .btn {
+  margin: 5px 0;
+}
+
+tr.suspended {
+  background-color: gray;
+}
+
+tr.logline.trace > td {
+  color: silver;
+}
+tr.logline.debug > td {
+  color: gray;
+}
+tr.logline.info > td {
+  color: black;
+}
+tr.logline.warn > td {
+  color: orange;
+}
+tr.logline.error > td {
+  color: red;
+}
+tr.logline.fatal > td {
+  color: red;
+  font-weight: bold;
+}

@@ -1,10 +1,10 @@
 <div class="page-header">
   <h1 id="queries">Queries</h1>
 </div>
-
 <% input_data ||= {}; input_data[:query_edit] ||= {} %>
 <% if queries.size > 0 %>
-<table class="table">
+<input type="text" class="form-control" placeholder="Search for..." id="query_search_input"/>     
+<table class="table" id="table_queries">
   <tr>
     <th>Group</th><th>Query name</th><th>Targets</th><th></th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th><th></th><th></th>
   </tr>
@@ -15,10 +15,121 @@
     <td><%= query['targets'].join(", ") %></td>
     <td><%= query['suspended'] ? "suspended" : "" %></td>
     <td>
-      <button class="btn btn-default btn-xs show-query-expression" data-load="<%= url_for("/json/query/#{query['name']}") %>">show query</button>
+      <a class="btn btn-info btn-xs" data-toggle="modal" href="#editQuery<%= index %>">
+        <span class="glyphicon glyphicon-edit"></span>
+      </a>
+      <div class="modal fade"
+           id="editQuery<%= index %>"
+           tabindex="-1" role="dialog" aria-labelledby="editQueryLabel<%= index %>" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Edit Query <%= query['name'] %></h4>
+            </div>
+            <form action="<%= url_for("/replace") %>" method="POST">
+              <div class="modal-body">
+                <p>name: <%= query['name'] %>, group: <%= query['group'] || "(default)" %></p>
+                <input type="hidden" name="query_name" value="<%= query['name'] %>"/>
+                <input type="hidden" name="query_group" value="<%= query['group'] %>"/>
+                <textarea name="expression" class="form-control" rows="5"><%= query['expression'] %></textarea>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </td>
     <td style="text-align: right;"></td>
     <td>
+    </td>
+    <td>
+      <% if query['suspended'] %>
+        <a class="btn btn-info btn-xs" data-toggle="modal" href="#resumeQuery<%= index %>">
+          <span class="glyphicon glyphicon-play"></span>
+        </a>
+        <div class="modal fade"
+          id="resumeQuery<%= index %>"
+          tabindex="-1" role="dialog" aria-labelledby="resumeQueryLabel<%= index %>" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Resume Query <%= query['name'] %></h4>
+              </div>
+              <div class="modal-body">
+                <p>name: <%= query['name'] %>, group: <%= query['group'] || "(default)" %></p>
+              <pre><%= query['expression'] %></pre>
+              </div>
+              <div class="modal-footer">
+                <form class="form-inline" action="<%= url_for("/resume") %>" method="POST">
+                  <input type="hidden" name="query_name" value="<%= query['name'] %>" />
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Resume</button>
+                </form>
+              </div>
+            </div><!-- /.modal-content -->
+          </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+      <% else %>
+        <a class="btn btn-warning btn-xs" data-toggle="modal" href="#suspendQuery<%= index %>">
+          <span class="glyphicon glyphicon-pause"></span>
+        </a>
+        <div class="modal fade"
+          id="suspendQuery<%= index %>"
+          tabindex="-1" role="dialog" aria-labelledby="suspendQueryLabel<%= index %>" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Suspend Query <%= query['name'] %></h4>
+              </div>
+              <div class="modal-body">
+                <p>name: <%= query['name'] %>, group: <%= query['group'] || "(default)" %></p>
+              <pre><%= query['expression'] %></pre>
+              </div>
+              <div class="modal-footer">
+                <form class="form-inline" action="<%= url_for("/suspend") %>" method="POST">
+                  <input type="hidden" name="query_name" value="<%= query['name'] %>" />
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-danger">Suspend</button>
+                </form>
+              </div>
+            </div><!-- /.modal-content -->
+          </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+     <% end %>
+    </td>
+    <td>
+      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= index %>">
+        <span class="glyphicon glyphicon-trash"></span>
+      </a>
+      <div class="modal fade"
+        id="removeQuery<%= index %>"
+        tabindex="-1" role="dialog" aria-labelledby="removeQueryLabel<%= index %>" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Remove Query <%= query['name'] %></h4>
+            </div>
+            <div class="modal-body">
+              <p>name: <%= query['name'] %>, group: <%= query['group'] || "(default)" %></p>
+              <pre><%= query['expression'] %></pre>
+            </div>
+            <div class="modal-footer">
+              <form class="form-inline" action="<%= url_for("/deregister") %>" method="POST">
+                <input type="hidden" name="query_name" value="<%= query['name'] %>" />
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Remove</button>
+              </form>
+            </div>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
     </td>
   </tr>  
   <% end %>
@@ -26,6 +137,11 @@
 
 <% else %>
 <p>No queries found.</p>
+<% end %>
+
+<% input_data ||= {}; input_data[:query_replace] ||= {} %>
+<% if input_data[:query_replace][:error] %>
+  <div class="alert alert-danger"><%= input_data[:query_replace][:error] %></div>
 <% end %>
 
 <h3 id="query_add">Add Query <button class="btn btn-warning btn-xs" id="query_add_editor_toggle">editor</button></h3>
@@ -61,7 +177,8 @@
 </div>
 
 <% if targets.size > 0 %>
-<table class="table">
+<input type="text" class="form-control" placeholder="Search for..." id="target_search_input"/>     
+<table class="table" id="table_targets">
   <tr><th>Target</th><th>Auto field</th><th>Fields</th><th>modified</th><th></th></tr>
   <% targets.each_with_index do |target, index| %>
   <tr>

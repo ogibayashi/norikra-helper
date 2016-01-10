@@ -91,4 +91,25 @@ $(function(){
     });
     $('#logsection').show();
   });
+
+    $('#query_search_input').keyup(function(){
+        if(!$(this).val()){
+            $('#table_queries tr').show();
+        }
+        else {
+            $('#table_queries tr').filter(':has(td)').hide();
+            $('#table_queries tr:contains(' + this.value + ')').show();
+        }
+    });
+
+    $('#target_search_input').keyup(function(){
+        if(!$(this).val()){
+            $('#table_targets tr').show();
+        }
+        else {
+            $('#table_targets tr').filter(':has(td)').hide();
+            $('#table_targets tr:contains(' + this.value + ')').show();
+        }
+    });
+
 });

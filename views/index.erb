@@ -166,11 +166,31 @@
           <input type="text" name="query_group" value="<%= input_data[:query_add][:query_group] %>" id="addQueryGroup" class="form-control" placeholder="(blank:default)" />
         </div>
         <button type="submit" class="btn btn-primary">Add Query</button>
+        <a class="btn btn-info" data-toggle="modal" href="#testquery">Test Query</a>
       </div>
     </div>
   </form>
 </div>
 
+<div id="testquery" class="modal fade" tabindex="-1" role="dialog"
+     aria-labelledby="testQueryLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="testQueryLabel">Testing Query</h4>
+      </div>
+      <div class="modal-body" >
+        <table id="queryTestResult" class="table" >
+          <tr><th width="240px">Time</th><th>Event</th></tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="page-header">
   <h1 id="targets">Targets</h1>

@@ -93,7 +93,13 @@ module NorikraHelper
 
     post '/register' do
       query_name,query_group,expression = params[:query_name], params[:query_group], params[:expression]
-
+      is_test = params[:test_query]
+      if is_test
+        query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
+        query_group = QUERY_GROUP
+        session[:input_data] = {  query_name: query_name }
+      end
+      
       error_hook = lambda{ |error_class, error_message|
         session[:input_data] = {
           query_edit: {
@@ -105,14 +111,18 @@ module NorikraHelper
       }
 
       if query_name.nil? || query_name.empty?
-        raise Norikra::ClientError, "Query name MUST NOT be blank"
+        raise Norikra::RPC::ClientError, "Query name MUST NOT be blank"
       end
       if query_group.nil? || query_group.empty?
         query_group = nil
       end
       logging(:register, [query_name, query_group, expression],  on_error_hook: error_hook) do 
         client.register(query_name, query_group,  expression)
-        redirect url_for("/#queries")
+        if is_test
+          json  :query_name => query_name 
+        else
+          redirect url_for("/#queries")
+        end
       end
     end
 
@@ -166,6 +176,14 @@ module NorikraHelper
         else
           halt 404
         end
+      end
+    end
+
+    get '/json/event/:query' do
+      query_name = params[:query]
+      logging(:json_event, [query_name]) do
+        puts query_name
+        json client.event(query_name)
       end
     end
     

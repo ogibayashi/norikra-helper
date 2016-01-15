@@ -1,5 +1,10 @@
 $(function(){
-
+    $(window).on('beforeunload', function() {
+        if(testQueryName) {
+            $.post('/deregister', {query_name: testQueryName});
+        };
+    });
+    
   $('.show-query-expression').each(function(i,e){
     $(this).bind('click', function(e){
       var button = $(this);
@@ -76,10 +81,6 @@ $(function(){
         }
     });
 
-    //    $('.show-this-modal').load(function(e){ $(e.target).modal('show'); });
-//    $('.show-this-modal').load(function(e){ alert("hello"); });
-//    $('#editQueryButton0').mouseover(function(e){ $('#editQuery0').modal('show'); });
-
   $('#show_server_logs').click(function(e){
     var url = $(e.target).data('url');
     var logtable = $('#logtable');
@@ -112,4 +113,34 @@ $(function(){
         }
     });
 
+    var pollQueryResult = function() {
+        var resultTable = $('#queryTestResult');
+        $.get('/json/event/' + testQueryName, {}, function(data){
+            data.forEach(function(event){
+                resultTable.append('<tr><td>' + event[0] + '</td><td>' + JSON.stringify(event[1])  + '</td></tr>');
+            });
+        });
+        queryResultTimer = setTimeout(pollQueryResult, 1000);
+    };
+
+    var queryResultTimer;
+    var testQueryName;
+    $('#testquery').on('shown.bs.modal', function(e) {
+        var expression = $('#addQueryExpression').val();
+        $.post('/register',
+               {expression: expression, test_query: true},
+               function(data) {
+                   testQueryName = data.query_name;
+               }
+              );
+        pollQueryResult();
+    });
+
+    $('#testquery').on('hide.bs.modal', function(e) {
+        $.post('/deregister', {query_name: testQueryName});
+        $('#queryTestResult').find("tr:gt(0)").remove();
+        testQueryName = null;
+        clearTimeout(queryResultTimer);
+    });
+    
 });

@@ -125,22 +125,43 @@ $(function(){
 
     var queryResultTimer;
     var testQueryName;
+    var testQueryExpression;
     $('#testquery').on('shown.bs.modal', function(e) {
-        var expression = $('#addQueryExpression').val();
+//        var expression = $('#addQueryExpression').val();
+        var expression = testQueryExpression || $('#addQueryExpression').val();
+        $('#testqueryExpr').text(expression);
+        console.log(expression);
         $.post('/register',
                {expression: expression, test_query: true},
                function(data) {
                    testQueryName = data.query_name;
-               }
-              );
+               }).fail(function(data){
+                   alert(data.responseText);
+                   $('#testquery').modal('hide');
+               });
         pollQueryResult();
     });
 
     $('#testquery').on('hide.bs.modal', function(e) {
-        $.post('/deregister', {query_name: testQueryName});
-        $('#queryTestResult').find("tr:gt(0)").remove();
+        if(testQueryName){
+            $.post('/deregister', {query_name: testQueryName});
+            $('#queryTestResult').find("tr:gt(0)").remove();
+        }
         testQueryName = null;
+        testQueryExpression = null;
         clearTimeout(queryResultTimer);
+    });
+    
+    $('.see-target').click(function(e){
+        var url = $(this).data('url');
+        $.get(url, function(data, status) {
+            console.log(status);
+            testQueryExpression = data.expression;
+            $('#testquery').modal('show');
+        }).fail(function(data){
+            alert(data.responseText);
+        });
+        ;
     });
     
 });

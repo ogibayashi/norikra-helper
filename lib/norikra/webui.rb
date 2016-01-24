@@ -1,6 +1,7 @@
 require 'sinatra/base'
 require 'sinatra/json'
 require 'norikra/client'
+require 'json'
 
 module NorikraHelper
   class WebUI < Sinatra::Base
@@ -97,12 +98,12 @@ module NorikraHelper
       if is_test
         query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
         query_group = QUERY_GROUP
-        session[:input_data] = {  query_name: query_name }
+        session[:input_data] = {  query_name: query_name, expression: expression }
       end
       
       error_hook = lambda{ |error_class, error_message|
         session[:input_data] = {
-          query_edit: {
+         query_add: {
             query_name: query_name, query_group: query_group, expression: expression,
             error: error_message,
           },
@@ -110,17 +111,26 @@ module NorikraHelper
         redirect url_for("/#query_add")
       }
 
-      if query_name.nil? || query_name.empty?
-        raise Norikra::RPC::ClientError, "Query name MUST NOT be blank"
-      end
+      error_hook_json = lambda{ |error_class, error_message|
+        halt 400,  error_message
+      }
+      
       if query_group.nil? || query_group.empty?
         query_group = nil
       end
-      logging(:register, [query_name, query_group, expression],  on_error_hook: error_hook) do 
-        client.register(query_name, query_group,  expression)
-        if is_test
+
+      if is_test
+        logging(:register, [query_name, query_group, expression,is_test],  on_error_hook: error_hook_json) do 
+          client.register(query_name, query_group,  expression)
           json  :query_name => query_name 
-        else
+        end
+      else
+        logging(:register, [query_name, query_group, expression,is_test],  on_error_hook: error_hook) do 
+          if query_name.nil? || query_name.empty?
+            raise Norikra::RPC::ClientError, "Query name MUST NOT be blank"
+          end
+
+          client.register(query_name, query_group,  expression)
           redirect url_for("/#queries")
         end
       end
@@ -203,5 +213,22 @@ module NorikraHelper
       end
     end
 
+    get '/json/:target/see' do
+      target = params[:target]
+      res = Net::HTTP.get("localhost","/stat/dump", 26578) ## ToDo
+      stats = JSON.parse(res)
+      if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
+        halt 404, "target '#{target}' not found"
+      end
+
+      if target_info['fields'].size == 0
+        halt 404, "Could not find fields for target: '#{target}'"
+      end
+
+      query = %(SELECT #{target_info['fields'].map{  |k,v| "nullable(#{k})" }.join(',')} FROM #{target_info['name']})
+      query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
+      json :query_name =>  query_name, :expression => query
+    end
+    
   end
 end

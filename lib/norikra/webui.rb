@@ -94,12 +94,6 @@ module NorikraHelper
 
     post '/register' do
       query_name,query_group,expression = params[:query_name], params[:query_group], params[:expression]
-      is_test = params[:test_query]
-      if is_test
-        query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
-        query_group = QUERY_GROUP
-        session[:input_data] = {  query_name: query_name, expression: expression }
-      end
       
       error_hook = lambda{ |error_class, error_message|
         session[:input_data] = {
@@ -111,31 +105,39 @@ module NorikraHelper
         redirect url_for("/#query_add")
       }
 
-      error_hook_json = lambda{ |error_class, error_message|
-        halt 400,  error_message
-      }
-      
       if query_group.nil? || query_group.empty?
         query_group = nil
       end
 
-      if is_test
-        logging(:register, [query_name, query_group, expression,is_test],  on_error_hook: error_hook_json) do 
-          client.register(query_name, query_group,  expression)
-          json  :query_name => query_name 
+      logging(:register, [query_name, query_group, expression],  on_error_hook: error_hook) do 
+        if query_name.nil? || query_name.empty?
+          raise Norikra::RPC::ClientError, "Query name MUST NOT be blank"
         end
-      else
-        logging(:register, [query_name, query_group, expression,is_test],  on_error_hook: error_hook) do 
-          if query_name.nil? || query_name.empty?
-            raise Norikra::RPC::ClientError, "Query name MUST NOT be blank"
-          end
 
-          client.register(query_name, query_group,  expression)
-          redirect url_for("/#queries")
-        end
+        client.register(query_name, query_group,  expression)
+        redirect url_for("/#queries")
       end
+
     end
 
+
+    post '/json/test_query' do
+      expression = params[:expression]
+      query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
+      query_group = QUERY_GROUP
+      session[:input_data] = {  query_name: query_name, expression: expression }
+
+      error_hook_json = lambda{ |error_class, error_message|
+        halt 400,  error_message
+      }
+
+      logging(:register, [query_name, query_group, expression],  on_error_hook: error_hook_json) do 
+        client.register(query_name, query_group,  expression)
+        json  :query_name => query_name 
+      end
+
+    end
+    
     post '/replace' do
       query_name,query_group,expression = params[:query_name], params[:query_group], params[:expression]
       current_query = client.queries.select{  |q| q['name'] == query_name}.first

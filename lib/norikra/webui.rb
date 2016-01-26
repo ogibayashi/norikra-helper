@@ -57,6 +57,16 @@ module NorikraHelper
     def client
       Norikra::Client.new('localhost', 26571) # TODO
     end
+
+    def get_target_info(target)
+      res = Net::HTTP.get("localhost","/stat/dump", 26578) ## ToDo
+      stats = JSON.parse(res)
+      if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
+        halt 404, "target '#{target}' not found"
+      end
+
+      target_info
+    end
     
     get '/' do
       @page = "summary"
@@ -217,12 +227,8 @@ module NorikraHelper
 
     get '/json/:target/see' do
       target = params[:target]
-      res = Net::HTTP.get("localhost","/stat/dump", 26578) ## ToDo
-      stats = JSON.parse(res)
-      if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
-        halt 404, "target '#{target}' not found"
-      end
-
+      target_info = get_target_info(target)
+      
       if target_info['fields'].size == 0
         halt 404, "Could not find fields for target: '#{target}'"
       end
@@ -230,6 +236,14 @@ module NorikraHelper
       query = %(SELECT #{target_info['fields'].map{  |k,v| "nullable(#{k})" }.join(',')} FROM #{target_info['name']})
       query_name = QUERY_NAME_PREFIX + "#{$$}_#{Time.now.to_i}"
       json :query_name =>  query_name, :expression => query
+    end
+
+    get '/json/target/:name' do
+
+      target_info = get_target_info(params[:name])
+      
+      target_info['fields'] = target_info['fields'].values
+      json target_info
     end
     
   end

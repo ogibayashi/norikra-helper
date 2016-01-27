@@ -126,6 +126,10 @@ $(function(){
             data.forEach(function(event){
                 resultTable.append('<tr><td>' + event[0] + '</td><td>' + JSON.stringify(event[1])  + '</td></tr>');
             });
+        }).fail(function(data){
+            alert(data.responseText);
+            clearTimeout(queryResultTimer);
+            return;
         });
         queryResultTimer = setTimeout(pollQueryResult, 1000);
     };

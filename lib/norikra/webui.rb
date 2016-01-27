@@ -209,6 +209,7 @@ module NorikraHelper
 
     get '/json/event/:query' do
       query_name = params[:query]
+
       logging(:json_event, [query_name]) do
         puts query_name
         json client.event(query_name)

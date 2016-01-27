@@ -2,6 +2,7 @@ require 'sinatra/base'
 require 'sinatra/json'
 require 'norikra/client'
 require 'json'
+require 'dotenv'
 
 module NorikraHelper
   class WebUI < Sinatra::Base
@@ -15,6 +16,11 @@ module NorikraHelper
     enable :sessions
 
     configure :production, :development do
+      Dotenv.load
+      set :norikra_host, ENV['NORIKRA_HOST'] || 'localhost'
+      set :norikra_rpc_port, ENV['NORIKRA_RPC_PORT'] || 26571
+      set :norikra_http_port, ENV['NORIKRA_HTTP_PORT'] || 26578
+
       enable :logging
     end
     
@@ -55,11 +61,11 @@ module NorikraHelper
     end
 
     def client
-      Norikra::Client.new('localhost', 26571) # TODO
+      Norikra::Client.new(settings.norikra_host, settings.norikra_rpc_port) # TODO
     end
 
     def get_target_info(target)
-      res = Net::HTTP.get("localhost","/stat/dump", 26578) ## ToDo
+      res = Net::HTTP.get(settings.norikra_host,"/stat/dump", settings.norikra_http_port) ## ToDo
       stats = JSON.parse(res)
       if (target_info = stats['targets'].select{  |i| i['name'] == target}.first).size == 0 
         halt 404, "target '#{target}' not found"

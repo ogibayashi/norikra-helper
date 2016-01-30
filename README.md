@@ -143,6 +143,14 @@ Registered query: norikra-tmp-23611_1449128094
 
 This command has a limitation. As this command just get field information of the target from Norikra and then select all fields, it cannot see fields Norikra doesn't know (e.g. Inside Hash or Array fields). 
 
+### Clean-up queries
+
+```
+norikra-helper query cleanup [-m N] [-r]
+```
+
+If you use `query test` or `target see`, temporal query will be registerd to Norikra. This query should be removed when you stop the command, but sometimes (e.g. This program was killed, TCP session was closed, etc..) not. `query cleanup` command is useful to remove such queries. Queries older than N (Default: 30) minutes ago, will be removed by this command. Default behaviour of this command is dry-run, so if you really want to remove those queries, specify `-r` option.
+
 ## Author
 
 Hironori Ogibayashi

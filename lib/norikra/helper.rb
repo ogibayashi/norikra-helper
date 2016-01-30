@@ -87,6 +87,28 @@ module Norikra::Helper
       end
     end
 
+    desc "cleanup", "Remove queries created by norikra-helper and older than XX minutes."
+    option :remove, :type => :boolean, :default => false, :desc => "Actually remove queries", :aliases => :r
+    option :older_than, :type => :numeric, :default => 30, :desc => "Queries older than this time period (by minutes) will be removed. ", :aliases => :m
+    def cleanup
+      threshold = (Time.now - options[:older_than] * 60).to_i
+      to_remove = client(parent_options).queries.select{  |q|
+        q['group'] == QUERY_GROUP &&
+          /#{QUERY_NAME_PREFIX}\d+_(\d+)$/ =~ q['name'] &&
+        $1.to_i < threshold
+      }
+      to_remove.each{  |q|
+        puts "#{q['name']} to be removed"
+        if options[:remove]
+          wrap do
+            client(parent_options).deregister(q['name'])
+          end
+          puts "Removed #{q['name']}"
+        end
+      }
+      
+    end
+    
   end
 
   class Event < Norikra::Client::Event

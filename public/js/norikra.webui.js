@@ -184,4 +184,14 @@ $(function(){
         ;
     });
     
+    function toggleChevron(e) {
+        $(e.target)
+            .prev('.panel-heading')
+            .find("i.indicator")
+            .toggleClass('glyphicon-chevron-right glyphicon-chevron-down');
+    }
+    $('#testquery_accordion').on('hidden.bs.collapse', toggleChevron);
+    $('#testquery_accordion').on('shown.bs.collapse', toggleChevron);
+
+
 });

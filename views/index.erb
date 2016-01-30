@@ -181,7 +181,19 @@
         <h4 class="modal-title" id="testQueryLabel">Testing Query</h4>
       </div>
       <div class="modal-body" >
-        <span id="testqueryExpr"></span>
+        <div class="panel-group" id="testquery_accordion" role="tablist" aria-multiselectable="true">
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingOne">
+              <i class="indicator glyphicon glyphicon-chevron-right"></i>
+              <a role="button" class="panel-title" data-toggle="collapse" data-parent="#acccordion" data-target="#testQueryDiv">
+                Query
+              </a>
+            </div>
+            <div id="testQueryDiv" class="panel-collapse collapse">
+              <span id="testqueryExpr"></span>
+            </div>
+          </div>
+        </div>
         <table id="queryTestResult" class="table" >
           <tr><th width="240px">Time</th><th>Event</th></tr>
         </table>

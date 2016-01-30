@@ -124,7 +124,9 @@ $(function(){
         var resultTable = $('#queryTestResult');
         $.get('/json/event/' + testQueryName, {}, function(data){
             data.forEach(function(event){
-                resultTable.append('<tr><td>' + event[0] + '</td><td>' + JSON.stringify(event[1])  + '</td></tr>');
+              resultTable.append('<tr><td>' +
+                                 (new Date(event[0] * 1000)).toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1")
+                                  + '</td><td>' + JSON.stringify(event[1])  + '</td></tr>');
             });
         }).fail(function(data){
             alert(data.responseText);
